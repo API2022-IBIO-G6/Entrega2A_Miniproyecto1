@@ -1,4 +1,12 @@
 # imports
+import cv2
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from skimage.morphology import label
+from skimage.measure import regionprops
+import numpy as np
+import utils
+import sys 
 
 # 8.2. Función predicciones de detección 
 
@@ -12,7 +20,47 @@ def Mask2Detection_Codigo1_Codigo2(mask, img_id):
     @return: Lista de diccionarios con las predicciones. Esta debe tener el mismo formato
     ejemplificado en el archivo “dummy_predictions.json”.
     """
-    pass
+    label_image = label(mask, connectivity=1)
+    print(label_image)
+    
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.imshow(label_image)
+
+    predicciones = []
+    print(len(regionprops(label_image)))
+    for region in regionprops(label_image):
+
+        # take regions with large enough areas
+        
+            # draw rectangle around segmented coins
+        min_row, min_col, max_row, max_col = region.bbox
+        print("print:",min_row, min_col, max_row, max_col)
+        rect = mpatches.Rectangle((min_col-1, min_row-1), max_col - min_col+1, max_row - min_row+1,
+                                fill=False, edgecolor='red', linewidth=1)
+        ax.add_patch(rect)
+        #mask= cv2.rectangle(mask, (int(min_row), int(min_col)), (int(max_row), int(max_col)), 3,thickness= 7)
+        
+        #score = utils.pred_score(mask)
+        #print(score)
+        
+        dic = {"image_id": img_id, 
+            "category_id": 1,
+            "bbox": [
+                min_row,
+                min_col,
+                max_row-min_row,
+                max_col -min_col
+            ],
+            "score": 1}
+        img_id += 1
+        predicciones.append(dic)
+        
+    ax.set_axis_off()
+    plt.tight_layout()
+    plt.show()
+    print(predicciones)
+    return predicciones
 
 # 8.2.1 Validación de la función de predicción de detección    
 """
