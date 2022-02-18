@@ -8,7 +8,7 @@ import numpy as np
 import config as cf
 assert cf
 import data_mp1.utils as ut
-import utils
+#import utils
 import sys 
 import  sklearn 
 import json
@@ -56,13 +56,21 @@ las 3 imágenes binarias diseñadas, elaboren un subplot de 3x2 donde se pueda v
 la máscara de segmentación original en la primera columna y la anotación de detección 
 correspondiente en la otra columna.
 """
-#PRUEBA
+# Inicializamos tres matrices 50x50 de ceros 
 matrix_1, matrix_2, matrix_3= np.zeros((50,50)), np.zeros((50,50)), np.zeros((50,50))
 
-matrix_1[3:9,2:10],matrix_1[2,3:9],matrix_1[9,3:9],matrix_1[1,4:8],matrix_1[10,4:8] =1, 1,1,1,1
-matrix_1[17:33,15:35], matrix_1[14,17:32], matrix_1[35,17:32], matrix_1[15:17,16:34],matrix_1[33:35,16:34], matrix_1[13,19:30], matrix_1[36,19:30] =1, 1,1,1,1,1,1 
-matrix_2[2:10,2:10], matrix_2[25:30,25:30]=1,1 #ES UN CUADRADO!!!!!! (CÍRCULO GRANDE)
-matrix_3[0:5,12:30], matrix_3[25:30,25:30]=1,1 #ES UN CUADRADO !!!!!!!!
+#Imagen Binaria 1
+#Dibujamos circulo 1
+matrix_1[3:9,2:10],matrix_1[[2,9],3:9],matrix_1[[1,10],4:8] =1,1,1
+#Dibujamos circulo 2
+matrix_1[17:33,9:33], matrix_1[[16,33],11:31], matrix_1[[15,34],13:29] =1,1,1
+
+# Imagen Binaria 2
+matrix_2[[19,20,39,40], 22:38], matrix_2[[18,41], 24:36], matrix_2[[21,22,37,38], 21:39], matrix_2[23:37, 20:40] = 1,1,1,1
+
+# Imagen Binaria 3
+matrix_3[21:30, [14,15,34,35]], matrix_3[22:29, [13,36]], matrix_3[20:31, 16:34] = 1, 1, 1  # ES UN CUADRADO !!!!!!!!
+
 masks = [matrix_1, matrix_2, matrix_3]
 lis_json = []
 i= 0
@@ -82,26 +90,7 @@ for mask in masks:
     i += 1
     lis_json += predicciones
     print("----------------\n",lis_json)
-plt.show()
-### OTRA OPCIÓN
-i= 0
-fig, ax = plt.subplots(nrows=3,ncols=2, figsize=(20, 12))
-for m in range(0,len(masks)):
-    ax[i,0].imshow(masks[m])
-    ax[i,0].set_axis_off()
-
-    label_image = label(masks[m], connectivity=1)
-    ax[i,1].imshow(label_image)
-    ax[i,1].set_axis_off()
-
-    for region in regionprops(label_image):
-        
-        min_row, min_col, max_row, max_col = region.bbox
-        
-        rect = mpatches.Rectangle((min_col-1, min_row-1), max_col - min_col+1, max_row - min_row+1,
-                                fill=False, edgecolor='red', linewidth=3)
-        ax[i,1].add_patch(rect)
-    i += 1
+plt.suptitle("Validación de la función de predicción de detección")
 plt.show()
 
 # 8.3 Función Evaluación de predicciones
