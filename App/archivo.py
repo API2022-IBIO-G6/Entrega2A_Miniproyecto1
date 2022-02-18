@@ -80,6 +80,7 @@ for mask in masks:
     ax[i,1].imshow(mask)
     ax[i,1].set_axis_off()
     # se obtiene la prediccion asociada
+    print("Imagen Binaria {}".format(i+1))
     predicciones = Mask2Detection_201923972_201923531(mask, i)    
     for p in predicciones:
         # Se grafica la anotación correspondiente
@@ -94,7 +95,7 @@ plt.show()
 
 # 8.3 Función Evaluación de predicciones
 var = "valid"
-carpeta =os.path.join("data_mp1","BCCD",var,"_annotations.coco.json")
+anotaciones =os.path.join("data_mp1","BCCD",var,"_annotations.coco.json")
 predicciones = os.path.join("data_mp1","dummy_predictions.json")
 
 def get_iou(a, b, epsilon=1e-5):
@@ -132,7 +133,7 @@ def get_iou(a, b, epsilon=1e-5):
     return iou
 
 
-def detections_Codigo1_Codigo2(conf_thresh=0.5, jaccard_thresh=0.7, annot_file=carpeta, pred_file= predicciones):
+def detections_201923972_201923531(conf_thresh=0.5, jaccard_thresh=0.7, annot_file=anotaciones, pred_file= predicciones):
     """
     @param conf_thresh: Umbral de confianza a partir del cual tener en cuenta una detección.
     @param jaccard_thresh: Umbral del índice de Jaccard a partir del cual se debe considerar una 
@@ -143,31 +144,37 @@ def detections_Codigo1_Codigo2(conf_thresh=0.5, jaccard_thresh=0.7, annot_file=c
     falsos negativos y TN: Cantidad de verdaderos negativos.
     """
     
-    with open(annot_file) as f:
-        annotations = json.load(f)
-    with open(pred_file) as f:
-        predictions = json.load(f)
+    with open(annot_file) as f: # abrimos el archivo de anotaciones
+        annotations = json.load(f) # Se guarda en una variable anotaciones 
+    with open(pred_file) as f: # Se abre el archivo de predicciones
+        predictions = json.load(f) # Se guarda el archivo de predicciones en la variable predictions
     
     TP, FP, FN = 0, 0, 0
-    for pred in predictions:    
+    for pred in predictions:
+        # Se recorre el archivo de predicciones y se obtiene el id de la imagen, su categoría y su bbox    
         pred_bbox, pred_category, pred_image_id= pred["bbox"], pred["category_id"], pred["image_id"]
+        # Se recorre el archivo de anotaciones 
         for annot in annotations["annotations"]:
             annot_category, annot_image_id= annot["category_id"], annot["image_id"]
+            # Se verifica que la imagen de la predicción sea la misma que la de la anotación
+            # y que la categoría de la predicción sea la misma que la de la anotación (en este caso 3)
             if annot_image_id == pred_image_id:
                 if pred_category == annot_category:
-                
                     annot_bbox = annot["bbox"]
-                    #Intersection Over Union (IOU) 
+                    #Se obtiene la intersección sobre la unión con la función iou 
                     iou = get_iou(pred_bbox, annot_bbox)
-
+                    # Si el score de la predicción es mayor al umbral de confianza se cuenta la imagen 
                     if pred["score"] >= conf_thresh:
+                        # Si el iou es mayor al umbral de jaccard se cuenta como un TP
                         if iou >= jaccard_thresh:
                             TP += 1
+                        # Si el iou es menor al umbral de jaccard se cuenta como un FP
                         elif iou <= jaccard_thresh:
                             FP += 1        
+                    # Si no cumple con lo anterior entonces la anotación no fue detectada y se cuenta como FN 
                     else:
                         FN += 1
-    TN = 0                    
+    TN = 0   # No se tiene en cuenta TN para detección de objetos                 
     return TP,FP,FN, TN 
 
 # 8.3.1 Validación de la función de evaluación de predicciones
@@ -177,41 +184,41 @@ que les fue entregada. Con estos, y usando un umbral de confianza de 0.5 y un um
 Jaccard de 0.7, deben calcular las métricas especificadas en la función junto con las métricas de 
 precisión, cobertura y f-medida asociadas. 
 """
-TP,FP,FN, TN =detections_Codigo1_Codigo2()
+TP,FP,FN,TN =detections_201923972_201923531()
 print("\n8.3.1 Validación de la función de evaluación de predicciones")
-print("\nConfusion Matrix : Anotacion (A), Prediccion (P)")
+print("\nMatriz de Confusión: Anotacion (A), Prediccion (P)")
 matrix = np.array([[TP,FP],[FN,TN]])
 print("{:25}\t{:20}\t{:20}\t".format("", "(A) Celulas blancas","(A) NO Celulas blancas" ))
 print("{:15}\t{:20}\t{:20}\t".format("(P) Celulas blancas", TP, FP))
 print("{:15}\t{:20}\t{:20}\t".format("(P) NO Celulas blancas", FN, TN))
 
-print("\nConfusion Matrix Normalizada por filas: Anotacion (A), Prediccion (P)")
-row_sums = matrix.sum(axis=1)
-normalize_row = np.round(matrix / row_sums[:, np.newaxis], 2)
+print("\nMatriz de Confusión Normalizada por filas: Anotacion (A), Prediccion (P)")
+row_sums = matrix.sum(axis=1) #sumamos las filas
+normalize_row = np.round(matrix / row_sums[:, np.newaxis], 2) #dividimos la matriz entre la suma de fila
 print("{:25}\t{:20}\t{:20}\t".format("", "(A) Celulas blancas","(A) NO Celulas blancas" ))
 print("{:15}\t{:20}\t{:20}\t".format("(P) Celulas blancas", normalize_row[0, 0], normalize_row[0, 1]))
 print("{:15}\t{:20}\t{:20}\t".format("(P) NO Celulas blancas", normalize_row[1, 0], normalize_row[1, 1]))
 
-print("\nConfusion Matrix Normalizada por columnas: Anotacion (A), Prediccion (P)")
-col_sums = matrix.sum(axis=0)
-normalize_col = np.round(matrix / col_sums, 2)
+print("\nMatriz de Confusión Normalizada por columnas: Anotacion (A), Prediccion (P)")
+col_sums = matrix.sum(axis=0) #sumamos las columnas
+normalize_col = np.round(matrix / col_sums, 2) #dividimos la matriz entre la suma de columnas
 print("{:25}\t{:20}\t{:20}\t".format("", "(A) Celulas blancas","(A) NO Celulas blancas" ))
 print("{:15}\t{:20}\t{:20}\t".format("(P) Celulas blancas", normalize_col[0, 0], normalize_col[0, 1]))
 print("{:15}\t{:20}\t{:20}\t".format("(P) NO Celulas blancas", normalize_col[1, 0], normalize_col[1, 1]))
 
-#Metricas
+#Métricas de precisión, cobertura y f-medida asociadas.
 precision = round(TP/(TP+FP),2)
 recall = round(TP/(TP+FN),2)
 f_measure = round(2*precision*recall/(precision+recall),2)
 
-print("Para un Umbral de confianza de 0.5 y un Umbral del índice de Jaccard de 0.7")
-print("Precision:",precision,"Recall:",recall,"F-measure:",f_measure)
+print("\nPara un Umbral de confianza de 0.5 y un Umbral del índice de Jaccard de 0.7")
+print("Precisión:",precision,"Cobertura:",recall,"F-medida:",f_measure)
 
 # 8.4 Función curva de precisión y recall
 jacc_thr = [0.5,0.7,0.9]
 sav_route = "data_mp1/curva_precision_recall.png"
 
-def PRCurve_Codigo1_Codigo2(jaccard_thresh=jacc_thr, annot_file=carpeta, pred_file=predicciones, save_route=sav_route):
+def PRCurve_201923972_201923531(jaccard_thresh=jacc_thr, annot_file=anotaciones, pred_file=predicciones, save_route=sav_route):
     """
     @param jaccard_thresh: Umbral del indice de Jaccard a partir del cual se debe considerar una
     deteccion como un verdadero positivo.
@@ -222,28 +229,33 @@ def PRCurve_Codigo1_Codigo2(jaccard_thresh=jacc_thr, annot_file=carpeta, pred_fi
     @return data: Lista con precisiones y coberturas de todos los puntos de la curva.
     """
     data =[]
+    # Se crea una lista llamada data y se comienza a reccorerel umbrales de jaccard
     for j in jaccard_thresh:
         precision = []
-        recall = []
+        recall = [] # Se crean dos listas. Una de precisión y otra de cobertura
         for i in np.arange(0.0, 1.1, 0.01):
-            TP, FP, FN, TN = detections_Codigo1_Codigo2(conf_thresh=i, jaccard_thresh=j)
-            if TP+FP != 0:
+            TP, FP, FN, TN = detections_201923972_201923531(conf_thresh=i, jaccard_thresh=j)
+            # Se recorrren los umbrales de confianza y se calculan las métricas de precisión y cobertura
+            if TP+FP != 0: # No se tiene en cuenta división por 0.0
                 precision.append(TP/(TP+FP))
                 recall.append(TP/(TP+FN))
-        area_under_the_curve = simps(precision,dx=0.01)
-        area_under_the_curve1= np.trapz(precision, dx=0.01)
-        print(area_under_the_curve, area_under_the_curve1)
+        area_under_the_curve = simps(precision,dx=0.01) # Se calcula el área bajo la curva con simps
+        
+        print("Área debajo de la curva para el índice de Jaccard de {}: {}".format(j, area_under_the_curve))
+        
         data.append({"precision":precision,"cobertura":recall, "area_under_the_curve":area_under_the_curve})
-        plt.plot(recall, precision,label="Jaccard = {}".format(j))
+        # Se crea una lista con los datos de precision y cobertura de cada punto de la curva y el área bajo la curva
+        plt.plot(recall, precision,label="Jaccard = {}".format(j)) # Se grafica la curva
     
+    # Se grafica la curva de precisión y cobertura para los 3 índices de Jaccard en un mismo plot 
     plt.xlabel("Cobertura")
     plt.ylabel("Precisión")
     plt.title("Curva precisión-cobertura")
     plt.legend()
-    plt.savefig(save_route)
+    plt.savefig(save_route) # se guarda la grafica en la ruta especificada
     plt.grid()
     plt.show()
-    return data
+    return data # Se retorna una lista de diccionarios con la información de cada punto de la curva
 
 # 8.4.1 Validación de la función de curva de precisión y recall
 """
@@ -252,4 +264,5 @@ que tienen disponibles en la carpeta data_mp1 en el archivo “dummy_predictions
 datos realicen 3 curvas de precisión y cobertura e incluyanlas en una misma Figura. Para esto utilicen
 3 índices de Jaccard diferentes [0.5, 0.7, 0.9]. 
 """
-PRCurve_Codigo1_Codigo2()
+print("\n8.4.1 Validación de la función de curva de precisión y recall\n")
+PRCurve_201923972_201923531() 
