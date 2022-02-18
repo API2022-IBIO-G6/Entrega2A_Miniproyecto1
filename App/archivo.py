@@ -1,4 +1,5 @@
 # imports
+from socket import TCP_NODELAY
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -10,7 +11,9 @@ assert cf
 import data_mp1.utils as ut
 import utils
 import sys 
-import  sklearn 
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import average_precision_score
+from sklearn.metrics import jaccard_score
 import json
 import os
 
@@ -57,12 +60,21 @@ la máscara de segmentación original en la primera columna y la anotación de d
 correspondiente en la otra columna.
 """
 #PRUEBA
+#Inicializamos tres matrices 50x50 de ceros
 matrix_1, matrix_2, matrix_3= np.zeros((50,50)), np.zeros((50,50)), np.zeros((50,50))
 
+#Imagen Binaria 1
+#Circulo 1
 matrix_1[3:9,2:10],matrix_1[2,3:9],matrix_1[9,3:9],matrix_1[1,4:8],matrix_1[10,4:8] =1, 1,1,1,1
+#Circulo 2
 matrix_1[17:33,15:35], matrix_1[14,17:32], matrix_1[35,17:32], matrix_1[15:17,16:34],matrix_1[33:35,16:34], matrix_1[13,19:30], matrix_1[36,19:30] =1, 1,1,1,1,1,1 
-matrix_2[2:10,2:10], matrix_2[25:30,25:30]=1,1 #ES UN CUADRADO!!!!!! (CÍRCULO GRANDE)
-matrix_3[0:5,12:30], matrix_3[25:30,25:30]=1,1 #ES UN CUADRADO !!!!!!!!
+
+# Imagen Binaria 2
+matrix_2[[19,20,39,40], 22:38], matrix_2[[18,41], 24:36], matrix_2[[21,22, 37, 38], 21:39], matrix_2[23:37, 20:40] = 1,1,1,1
+
+# Imagen Binaria 3
+matrix_3[21:30, [14,15,34,35]], matrix_3[22:29, [13,36]], matrix_3[20:31, 16:34] = 1, 1, 1  # ES UN CUADRADO !!!!!!!!
+
 masks = [matrix_1, matrix_2, matrix_3]
 lis_json = []
 i= 0
@@ -105,28 +117,50 @@ for m in range(0,len(masks)):
 plt.show()
 
 # 8.3 Función Evaluación de predicciones
-var = "train"
+var = "valid"
 carpeta =os.path.join("data_mp1","BCCD",var,"_annotations.coco.json")
 predicciones = os.path.join("data_mp1","dummy_predictions.json")
 
-def bb_intersection_over_union(boxA, boxB):
-    	# determine the (x, y)-coordinates of the intersection rectangle
-	xA = max(boxA[0], boxB[0])
-	yA = max(boxA[1], boxB[1])
-	xB = min(boxA[2], boxB[2])
-	yB = min(boxA[3], boxB[3])
-	# compute the area of intersection rectangle
-	interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
-	# compute the area of both the prediction and ground-truth
-	# rectangles
-	boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
-	boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
-	# compute the intersection over union by taking the intersection
-	# area and dividing it by the sum of prediction + ground-truth
-	# areas - the interesection area
-	iou = interArea / float(boxAArea + boxBArea - interArea)
-	# return the intersection over union value
-	return iou
+def get_iou(a, b, epsilon=1e-5):
+    """ 
+    Given two boxes `a` and `b` defined as a list of four numbers:
+            [x1,y1,x2,y2]
+        where:
+            x1,y1 represent the upper left corner
+            x2,y2 represent the lower right corner // tiene que representar w h 
+        It returns the Intersect of Union score for these two boxes.
+    Args: 
+        a:          (list of 4 numbers) [x1,y1,x2,y2] // [x,y,w,h]
+        b:          (list of 4 numbers) [x1,y1,x2,y2] // [x,y,w,h]
+        epsilon:    (float) Small value to prevent division by zero
+    Returns:
+        (float) The Intersect of Union score.
+    """
+    # COORDINATES OF THE INTERSECTION BOX
+    x1 = max(a[0], b[0])
+    y1 = max(a[1], b[1])
+    x2 = min(a[0]+a[2], b[0]+b[2])
+    y2 = min(a[1]+a[3], b[1]+b[3])
+    #x2 = min(a[2], b[2])
+    #y2 = min(a[3], b[3])
+
+    # AREA OF OVERLAP - Area where the boxes intersect
+    width = (x2 - x1)
+    height = (y2 - y1)
+    # handle case where there is NO overlap
+    if (width<0) or (height <0):
+        return 0.0
+    area_overlap = width * height
+
+    # COMBINED AREA
+    area_a = (a[2]) * (a[3])
+    area_b = (b[2]) * (b[3])
+    area_combined = area_a + area_b - area_overlap
+
+    # RATIO OF AREA OF OVERLAP OVER COMBINED AREA
+    iou = area_overlap / (area_combined+epsilon)
+    return iou
+
 
 def detections_Codigo1_Codigo2(conf_thresh=0.5, jaccard_thresh=0.7, annot_file=carpeta, pred_file= predicciones):
     """
@@ -138,34 +172,39 @@ def detections_Codigo1_Codigo2(conf_thresh=0.5, jaccard_thresh=0.7, annot_file=c
     @return: TP: Cantidad de verdaderos positivos, FP: Cantidad de falsos positivos, FN: Cantidad de
     falsos negativos y TN: Cantidad de verdaderos negativos.
     """
+    
+    lista=[]
     with open(annot_file) as f:
         annotations = json.load(f)
     with open(pred_file) as f:
         predictions = json.load(f)
+    
     TP, FP, FN, TN = 0, 0, 0, 0
     #Intersection Over Union (IOU)
+    
     for pred in predictions:
-        
         if pred["score"] >= conf_thresh:
             pred_bbox, pred_category, pred_image_id= pred["bbox"], pred["category_id"], pred["image_id"]
             for annot in annotations["annotations"]:
                 annot_category, annot_image_id= annot["category_id"], annot["image_id"]
                 if annot_image_id == pred_image_id:
                     annot_bbox = annot["bbox"]
-                    iou = bb_intersection_over_union(pred_bbox, annot_bbox)
+                    iou = get_iou(pred_bbox, annot_bbox)
                     if iou >= jaccard_thresh:
                         if pred_category == annot_category:
                             TP += 1
+                            lista.append("TP")
                     elif iou <= jaccard_thresh:
                         if pred_category == annot_category:
-                            FP += 1
-                    else:
-                        FN += 1
-    return print("TP:",TP,"FP:",FP,"FN:",FN,"TN:",TN)
-detections_Codigo1_Codigo2()
+                            FP += 1 
+                            lista.append("FP")         
+        else:
+            FN += 1 
+            lista.append("FN")
+    print("TP:",TP,"FP:",FP,"FN:",FN,"TN:",TN)
+    print("\nlista:",lista, lista.count("TP"), lista.count("FP"), lista.count("FN"), lista.count("TN"))
+    return TP,FP,FN, TN ## REVISAR FN!!!!!!!!!!
 
-    
-    
 # 8.3.1 Validación de la función de evaluación de predicciones
 """
 Utilizar los datos disponibles en el archivo “dummy_predictions.json” dentro de la carpeta data_mp1 
@@ -173,10 +212,20 @@ que les fue entregada. Con estos, y usando un umbral de confianza de 0.5 y un um
 Jaccard de 0.7, deben calcular las métricas especificadas en la función junto con las métricas de 
 precisión, cobertura y f-medida asociadas. 
 """
+TP,FP,FN, TN =detections_Codigo1_Codigo2()
 
+precision = round(TP/(TP+FP),2)
+recall = round(TP/(TP+FN),2)
+f_measure = round(2*precision*recall/(precision+recall),2)
+print("Precision:",precision,"Recall:",recall,"F-measure:",f_measure)
+
+# HACER MATRIZ DE CONFUSIÓN ...
 
 # 8.4 Función curva de precisión y recall
-def PRCurve_Codigo1_Codigo2(jaccard_thresh, annot_file, pred_file, save_route):
+jacc_thr = [0.5,0.7,0.9]
+sav_route = "data_mp1/curva_precision_recall.png"
+
+def PRCurve_Codigo1_Codigo2(jaccard_thresh=jacc_thr[0], annot_file=carpeta, pred_file=predicciones, save_route=sav_route):
     """
     @param jaccard_thresh: Umbral del indice de Jaccard a partir del cual se debe considerar una
     deteccion como un verdadero positivo.

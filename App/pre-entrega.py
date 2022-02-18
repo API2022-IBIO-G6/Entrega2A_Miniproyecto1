@@ -39,12 +39,21 @@ def Mask2Detection(mask, img_id):
     return predicciones
 
 #PRUEBA
+#Inicializamos tres matrices 50x50 de ceros
 matrix_1, matrix_2, matrix_3= np.zeros((50,50)), np.zeros((50,50)), np.zeros((50,50))
 
+#Imagen Binaria 1
+#Circulo 1
 matrix_1[3:9,2:10],matrix_1[2,3:9],matrix_1[9,3:9],matrix_1[1,4:8],matrix_1[10,4:8] =1, 1,1,1,1
+#Circulo 2
 matrix_1[17:33,15:35], matrix_1[14,17:32], matrix_1[35,17:32], matrix_1[15:17,16:34],matrix_1[33:35,16:34], matrix_1[13,19:30], matrix_1[36,19:30] =1, 1,1,1,1,1,1 
-matrix_2[2:10,2:10], matrix_2[25:30,25:30]=1,1 #ES UN CUADRADO!!!!!! (CÍRCULO GRANDE)
-matrix_3[0:5,12:30], matrix_3[25:30,25:30]=1,1 #ES UN CUADRADO !!!!!!!!
+
+# Imagen Binaria 2
+matrix_2[[19,20,39,40], 22:38], matrix_2[[18,41], 24:36], matrix_2[[21,22, 37, 38], 21:39], matrix_2[23:37, 20:40] = 1,1,1,1
+
+# Imagen Binaria 3
+matrix_3[21:30, [14,15,34,35]], matrix_3[22:29, [13,36]], matrix_3[20:31, 16:34] = 1, 1, 1  # ES UN CUADRADO !!!!!!!!
+
 masks = [matrix_1, matrix_2, matrix_3]
 lis_json = []
 i= 0
@@ -65,6 +74,7 @@ for mask in masks:
     lis_json += predicciones
     print("----------------\n",lis_json)
 plt.show()
+
 ### OTRA OPCIÓN
 i= 0
 fig, ax = plt.subplots(nrows=3,ncols=2, figsize=(20, 12))
