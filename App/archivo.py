@@ -1,5 +1,6 @@
 # imports
 from socket import TCP_NODELAY
+from turtle import color
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -16,6 +17,8 @@ from sklearn.metrics import average_precision_score
 from sklearn.metrics import jaccard_score
 import json
 import os
+import matplotlib.pyplot as plt
+import numpy as np
 
 # 8.2. Función predicciones de detección 
 
@@ -187,7 +190,7 @@ def detections_Codigo1_Codigo2(conf_thresh=0.5, jaccard_thresh=0.7, annot_file=c
     #print("##########################################33")
     #print("\nlista:",lista, lista.count("TP"), lista.count("FP"), lista.count("FN"), lista.count("TN"))
     #print(FN_1)
-    print("TP:",TP,"FP:",FP,"FN:",FN,"TN:",TN)
+    #print("TP:",TP,"FP:",FP,"FN:",FN,"TN:",TN)
    
     return TP,FP,FN, TN ## REVISAR FN!!!!!!!!!!
 
@@ -200,18 +203,24 @@ precisión, cobertura y f-medida asociadas.
 """
 TP,FP,FN, TN =detections_Codigo1_Codigo2()
 
+print("Confusion Matrix : Anotacion (A), Prediccion (P)")
+print("{:25}\t{:20}\t{:20}\t".format("", "(A) Celulas blancas","(A) NO Celulas blancas" ))
+print("{:15}\t{:20}\t{:20}\t".format("(P) Celulas blancas", TP, FP))
+print("{:15}\t{:20}\t{:20}\t".format("(P) NO Celulas blancas", FN, TN))
+
+#Metricas
 precision = round(TP/(TP+FP),2)
 recall = round(TP/(TP+FN),2)
 f_measure = round(2*precision*recall/(precision+recall),2)
-print("Precision:",precision,"Recall:",recall,"F-measure:",f_measure)
 
-# HACER MATRIZ DE CONFUSIÓN ...
+print("Para un Umbral de confianza de 0.5 y un Umbral del índice de Jaccard de 0.7")
+print("Precision:",precision,"Recall:",recall,"F-measure:",f_measure)
 
 # 8.4 Función curva de precisión y recall
 jacc_thr = [0.5,0.7,0.9]
 sav_route = "data_mp1/curva_precision_recall.png"
 
-def PRCurve_Codigo1_Codigo2(jaccard_thresh=jacc_thr[0], annot_file=carpeta, pred_file=predicciones, save_route=sav_route):
+def PRCurve_Codigo1_Codigo2(jaccard_thresh=jacc_thr, annot_file=carpeta, pred_file=predicciones, save_route=sav_route):
     """
     @param jaccard_thresh: Umbral del indice de Jaccard a partir del cual se debe considerar una
     deteccion como un verdadero positivo.
@@ -221,7 +230,26 @@ def PRCurve_Codigo1_Codigo2(jaccard_thresh=jacc_thr[0], annot_file=carpeta, pred
     @return area_under_the_curve: El área por debajo de la curva de precisión y cobertura.
     @return data: Lista con precisiones y coberturas de todos los puntos de la curva.
     """
-    pass
+    data =[]
+    for j in jaccard_thresh:
+        precision = []
+        recall = []
+        for i in np.arange(0.0, 1.1, 0.01):
+            TP, FP, FN, TN = detections_Codigo1_Codigo2(conf_thresh=i, jaccard_thresh=j)
+            if TP+FP != 0:
+                precision.append(round(TP/(TP+FP),2))
+                recall.append(round(TP/(TP+FN),2))
+        data.append({"precision":precision,"cobertura":recall})
+        plt.plot(recall, precision,label="Jaccard = {}".format(j))
+    
+    plt.xlabel("Cobertura")
+    plt.ylabel("Precisión")
+    plt.title("Curva precisión-cobertura")
+    plt.savefig(save_route)
+    plt.legend()
+    plt.grid()
+    plt.show()
+    return data
 
 # 8.4.1 Validación de la función de curva de precisión y recall
 """
@@ -230,3 +258,4 @@ que tienen disponibles en la carpeta data_mp1 en el archivo “dummy_predictions
 datos realicen 3 curvas de precisión y cobertura e incluyanlas en una misma Figura. Para esto utilicen
 3 índices de Jaccard diferentes [0.5, 0.7, 0.9]. 
 """
+PRCurve_Codigo1_Codigo2()
