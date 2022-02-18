@@ -56,11 +56,13 @@ las 3 imágenes binarias diseñadas, elaboren un subplot de 3x2 donde se pueda v
 la máscara de segmentación original en la primera columna y la anotación de detección 
 correspondiente en la otra columna.
 """
+#PRUEBA
 matrix_1, matrix_2, matrix_3= np.zeros((50,50)), np.zeros((50,50)), np.zeros((50,50))
 
-matrix_1[2:10,2:10], matrix_1[25:30,25:30], matrix_1[35:40,40:46] =1, 1,1 
-matrix_2[2:10,2:10], matrix_2[25:30,25:30]=1,1
-matrix_3[0:5,12:30], matrix_3[25:30,25:30]=1,1
+matrix_1[3:9,2:10],matrix_1[2,3:9],matrix_1[9,3:9],matrix_1[1,4:8],matrix_1[10,4:8] =1, 1,1,1,1
+matrix_1[17:33,15:35], matrix_1[14,17:32], matrix_1[35,17:32], matrix_1[15:17,16:34],matrix_1[33:35,16:34], matrix_1[13,19:30], matrix_1[36,19:30] =1, 1,1,1,1,1,1 
+matrix_2[2:10,2:10], matrix_2[25:30,25:30]=1,1 #ES UN CUADRADO!!!!!! (CÍRCULO GRANDE)
+matrix_3[0:5,12:30], matrix_3[25:30,25:30]=1,1 #ES UN CUADRADO !!!!!!!!
 masks = [matrix_1, matrix_2, matrix_3]
 lis_json = []
 i= 0
@@ -101,7 +103,6 @@ for m in range(0,len(masks)):
         ax[i,1].add_patch(rect)
     i += 1
 plt.show()
-
 
 # 8.3 Función Evaluación de predicciones
 var = "train"
@@ -144,7 +145,7 @@ def detections_Codigo1_Codigo2(conf_thresh=0.5, jaccard_thresh=0.7, annot_file=c
     TP, FP, FN, TN = 0, 0, 0, 0
     #Intersection Over Union (IOU)
     for pred in predictions:
-        #print(pred)
+        
         if pred["score"] >= conf_thresh:
             pred_bbox, pred_category, pred_image_id= pred["bbox"], pred["category_id"], pred["image_id"]
             for annot in annotations["annotations"]:
@@ -155,12 +156,11 @@ def detections_Codigo1_Codigo2(conf_thresh=0.5, jaccard_thresh=0.7, annot_file=c
                     if iou >= jaccard_thresh:
                         if pred_category == annot_category:
                             TP += 1
-                        FP += 1
                     elif iou <= jaccard_thresh:
                         if pred_category == annot_category:
-                            FN += 1
-                        else:
-                            TN += 1
+                            FP += 1
+                    else:
+                        TN += 1
     return print("TP:",TP,"FP:",FP,"FN:",FN,"TN:",TN)
 detections_Codigo1_Codigo2()
 
