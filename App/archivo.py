@@ -160,7 +160,7 @@ def detections_Codigo1_Codigo2(conf_thresh=0.5, jaccard_thresh=0.7, annot_file=c
                         if pred_category == annot_category:
                             FP += 1
                     else:
-                        TN += 1
+                        FN += 1
     return print("TP:",TP,"FP:",FP,"FN:",FN,"TN:",TN)
 detections_Codigo1_Codigo2()
 
