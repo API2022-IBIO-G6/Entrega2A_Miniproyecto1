@@ -1,7 +1,4 @@
 # imports
-from socket import TCP_NODELAY
-from turtle import color
-import cv2
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from skimage.morphology import label
@@ -10,15 +7,12 @@ import numpy as np
 import config as cf
 assert cf
 import data_mp1.utils as ut
-#import utils
 import sys 
-from sklearn.metrics import precision_recall_curve
-from sklearn.metrics import average_precision_score
-from sklearn.metrics import jaccard_score
 import json
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.integrate import simps
 
 # 8.2. Función predicciones de detección 
 
@@ -80,7 +74,7 @@ matrix_3[21:30, [14,15,34,35]], matrix_3[22:29, [13,36]], matrix_3[20:31, 16:34]
 masks = [matrix_1, matrix_2, matrix_3]
 lis_json = []
 i= 0
-fig, ax = plt.subplots(nrows=3,ncols=2, figsize=(20, 12))
+fig, ax = plt.subplots(nrows=3,ncols=2)
 for mask in masks:
     ax[i,0].imshow(mask)
     ax[i,0].set_axis_off()
@@ -97,6 +91,7 @@ for mask in masks:
     lis_json += predicciones
     print("----------------\n",lis_json)
 plt.suptitle("Validación de la función de predicción de detección")
+plt.tight_layout()
 plt.show()
 
 # 8.3 Función Evaluación de predicciones
@@ -186,12 +181,6 @@ def detections_Codigo1_Codigo2(conf_thresh=0.5, jaccard_thresh=0.7, annot_file=c
                         lista.append("FN")
                         FN += 1
     TN = 0                    
-    #FN_1 = len(lista_aux) - TP - FP -TN 
-    #print("##########################################33")
-    #print("\nlista:",lista, lista.count("TP"), lista.count("FP"), lista.count("FN"), lista.count("TN"))
-    #print(FN_1)
-    #print("TP:",TP,"FP:",FP,"FN:",FN,"TN:",TN)
-   
     return TP,FP,FN, TN ## REVISAR FN!!!!!!!!!!
 
 # 8.3.1 Validación de la función de evaluación de predicciones
@@ -237,16 +226,19 @@ def PRCurve_Codigo1_Codigo2(jaccard_thresh=jacc_thr, annot_file=carpeta, pred_fi
         for i in np.arange(0.0, 1.1, 0.01):
             TP, FP, FN, TN = detections_Codigo1_Codigo2(conf_thresh=i, jaccard_thresh=j)
             if TP+FP != 0:
-                precision.append(round(TP/(TP+FP),2))
-                recall.append(round(TP/(TP+FN),2))
-        data.append({"precision":precision,"cobertura":recall})
+                precision.append(TP/(TP+FP))
+                recall.append(TP/(TP+FN))
+        area_under_the_curve = simps(precision,dx=0.01)
+        area_under_the_curve1= np.trapz(precision, dx=0.01)
+        print(area_under_the_curve, area_under_the_curve1)
+        data.append({"precision":precision,"cobertura":recall, "area_under_the_curve":area_under_the_curve})
         plt.plot(recall, precision,label="Jaccard = {}".format(j))
     
     plt.xlabel("Cobertura")
     plt.ylabel("Precisión")
     plt.title("Curva precisión-cobertura")
-    plt.savefig(save_route)
     plt.legend()
+    plt.savefig(save_route)
     plt.grid()
     plt.show()
     return data
