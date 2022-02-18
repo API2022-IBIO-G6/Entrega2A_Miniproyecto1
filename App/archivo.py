@@ -154,35 +154,41 @@ def detections_Codigo1_Codigo2(conf_thresh=0.5, jaccard_thresh=0.7, annot_file=c
     """
     
     lista=[]
+    lista_aux =[]
     with open(annot_file) as f:
         annotations = json.load(f)
     with open(pred_file) as f:
         predictions = json.load(f)
     
-    TP, FP, FN, TN = 0, 0, 0, 0
+    TP, FP, FN = 0, 0, 0
     #Intersection Over Union (IOU)
     
-    for pred in predictions:
-        if pred["score"] >= conf_thresh:
-            pred_bbox, pred_category, pred_image_id= pred["bbox"], pred["category_id"], pred["image_id"]
-            for annot in annotations["annotations"]:
-                annot_category, annot_image_id= annot["category_id"], annot["image_id"]
-                if annot_image_id == pred_image_id:
+    for pred in predictions:    
+        pred_bbox, pred_category, pred_image_id= pred["bbox"], pred["category_id"], pred["image_id"]
+        for annot in annotations["annotations"]:
+            annot_category, annot_image_id= annot["category_id"], annot["image_id"]
+            if annot_image_id == pred_image_id:
+                if pred_category == annot_category:
+                    lista_aux.append(0)
                     annot_bbox = annot["bbox"]
                     iou = get_iou(pred_bbox, annot_bbox)
-                    if iou >= jaccard_thresh:
-                        if pred_category == annot_category:
+                    if pred["score"] >= conf_thresh:
+                        if iou >= jaccard_thresh:
                             TP += 1
                             lista.append("TP")
-                    elif iou <= jaccard_thresh:
-                        if pred_category == annot_category:
+                        elif iou <= jaccard_thresh:
                             FP += 1 
                             lista.append("FP")         
-        else:
-            FN += 1 
-            lista.append("FN")
+                    else:
+                        lista.append("FN")
+                        FN += 1
+    TN = 0                    
+    #FN_1 = len(lista_aux) - TP - FP -TN 
+    #print("##########################################33")
+    #print("\nlista:",lista, lista.count("TP"), lista.count("FP"), lista.count("FN"), lista.count("TN"))
+    #print(FN_1)
     print("TP:",TP,"FP:",FP,"FN:",FN,"TN:",TN)
-    print("\nlista:",lista, lista.count("TP"), lista.count("FP"), lista.count("FN"), lista.count("TN"))
+   
     return TP,FP,FN, TN ## REVISAR FN!!!!!!!!!!
 
 # 8.3.1 Validación de la función de evaluación de predicciones
