@@ -5,10 +5,14 @@ import matplotlib.patches as mpatches
 from skimage.morphology import label
 from skimage.measure import regionprops
 import numpy as np
+import config as cf
+assert cf
+import data_mp1.utils as ut
 import utils
 import sys 
 import  sklearn 
 import json
+import os
 
 # 8.2. Función predicciones de detección 
 
@@ -100,7 +104,30 @@ plt.show()
 
 
 # 8.3 Función Evaluación de predicciones
-def detections_Codigo1_Codigo2(conf_thresh, jaccard_thresh, annot_file, pred_file):
+var = "train"
+carpeta =os.path.join("data_mp1","BCCD",var,"_annotations.coco.json")
+predicciones = os.path.join("data_mp1","dummy_predictions.json")
+
+def bb_intersection_over_union(boxA, boxB):
+    	# determine the (x, y)-coordinates of the intersection rectangle
+	xA = max(boxA[0], boxB[0])
+	yA = max(boxA[1], boxB[1])
+	xB = min(boxA[2], boxB[2])
+	yB = min(boxA[3], boxB[3])
+	# compute the area of intersection rectangle
+	interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+	# compute the area of both the prediction and ground-truth
+	# rectangles
+	boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
+	boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
+	# compute the intersection over union by taking the intersection
+	# area and dividing it by the sum of prediction + ground-truth
+	# areas - the interesection area
+	iou = interArea / float(boxAArea + boxBArea - interArea)
+	# return the intersection over union value
+	return iou
+
+def detections_Codigo1_Codigo2(conf_thresh=0.5, jaccard_thresh=0.7, annot_file=carpeta, pred_file= predicciones):
     """
     @param conf_thresh: Umbral de confianza a partir del cual tener en cuenta una detección.
     @param jaccard_thresh: Umbral del índice de Jaccard a partir del cual se debe considerar una 
@@ -108,16 +135,40 @@ def detections_Codigo1_Codigo2(conf_thresh, jaccard_thresh, annot_file, pred_fil
     @param annot_file: Ruta del archivo donde se encuentren las anotaciones.
     @param pred_file: Ruta del archivo donde se encuentren las predicciones.
     @return: TP: Cantidad de verdaderos positivos, FP: Cantidad de falsos positivos, FN: Cantidad de
-    falsos negativos y TN: Cantidad de verdaderos negativos. 
+    falsos negativos y TN: Cantidad de verdaderos negativos.
     """
     with open(annot_file) as f:
         annotations = json.load(f)
     with open(pred_file) as f:
         predictions = json.load(f)
-    
     TP, FP, FN, TN = 0, 0, 0, 0
-    pass
+    #Intersection Over Union (IOU)
+    for pred in predictions:
+        #print(pred)
+        if pred["score"] >= conf_thresh:
+            pred_bbox = pred["bbox"]
+            pred_category = pred["category_id"]
+            pred_image_id = pred["image_id"]
+            for annot in annotations["annotations"]:
+                annot_category = annot["category_id"]
+                annot_image_id = annot["image_id"]
+                if annot_image_id == pred_image_id:
+                    annot_bbox = annot["bbox"]
+                    iou = bb_intersection_over_union(pred_bbox, annot_bbox)
+                    if iou >= jaccard_thresh:
+                        if pred_category == annot_category:
+                            TP += 1
+                        FP += 1
+                    elif iou <= jaccard_thresh:
+                        if pred_category == annot_category:
+                            FN += 1
+                        else:
+                            TN += 1
+    return print("TP:",TP,"FP:",FP,"FN:",FN,"TN:",TN)
+detections_Codigo1_Codigo2()
 
+    
+    
 # 8.3.1 Validación de la función de evaluación de predicciones
 """
 Utilizar los datos disponibles en el archivo “dummy_predictions.json” dentro de la carpeta data_mp1 
