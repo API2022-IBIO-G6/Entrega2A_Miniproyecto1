@@ -146,12 +146,9 @@ def detections_Codigo1_Codigo2(conf_thresh=0.5, jaccard_thresh=0.7, annot_file=c
     for pred in predictions:
         #print(pred)
         if pred["score"] >= conf_thresh:
-            pred_bbox = pred["bbox"]
-            pred_category = pred["category_id"]
-            pred_image_id = pred["image_id"]
+            pred_bbox, pred_category, pred_image_id= pred["bbox"], pred["category_id"], pred["image_id"]
             for annot in annotations["annotations"]:
-                annot_category = annot["category_id"]
-                annot_image_id = annot["image_id"]
+                annot_category, annot_image_id= annot["category_id"], annot["image_id"]
                 if annot_image_id == pred_image_id:
                     annot_bbox = annot["bbox"]
                     iou = bb_intersection_over_union(pred_bbox, annot_bbox)
