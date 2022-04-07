@@ -80,7 +80,7 @@ for mask in masks:
     ax[i,1].imshow(mask)
     ax[i,1].set_axis_off()
     # se obtiene la prediccion asociada
-    print("Imagen Binaria {}".format(i+1))
+    print("\n*******Imagen Binaria {}*********\n".format(i+1))
     predicciones = Mask2Detection_201923972_201923531(mask, i)    
     for p in predicciones:
         # Se grafica la anotación correspondiente
@@ -241,7 +241,7 @@ def PRCurve_201923972_201923531(jaccard_thresh=jacc_thr, annot_file=anotaciones,
                 recall.append(TP/(TP+FN))
         area_under_the_curve = simps(precision,dx=0.01) # Se calcula el área bajo la curva con simps
         
-        print("Área debajo de la curva para el índice de Jaccard de {}: {}".format(j, area_under_the_curve))
+        print("Área debajo de la curva para el índice de Jaccard de {}: {}".format(j, round(area_under_the_curve,2)))
         
         data.append({"precision":precision,"cobertura":recall, "area_under_the_curve":area_under_the_curve})
         # Se crea una lista con los datos de precision y cobertura de cada punto de la curva y el área bajo la curva
